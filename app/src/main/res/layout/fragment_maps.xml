@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+
+    <fragment
+        android:id="@+id/map"
+        android:name="com.google.android.gms.maps.SupportMapFragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:context=".fragments.MapsFragment" />
+
+    <ImageView
+        android:id="@+id/redDot"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="16dp"
+        android:contentDescription="@string/recording"
+        android:src="@drawable/ic_baseline_red_dot_24"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+
+    <RadioGroup
+        android:id="@+id/radioGroup"
+        android:layout_below="@+id/redDot"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="16dp"
+        android:layout_marginTop="16dp"
+        android:background="#56AAAAAA"
+        android:orientation="vertical">
+
+        <RadioButton
+            android:id="@+id/rb_check_normal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="NORMAL"/>
+
+        <RadioButton
+            android:id="@+id/rb_check_satellite"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:checked="true"
+            android:text="SATELLITE"/>
+
+    </RadioGroup>
+
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/radioGroup"
+        android:background="#56AAAAAA"
+        android:layout_marginTop="10dp"
+        android:paddingBottom="4dp"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvAccuracy"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Accuracy: 0"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvElevation"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Elevation: 0.0"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvLat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Latitude: 0.0"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvLong"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="longitude: 0.0"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvPdr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="PdrPosition: 0.0,0.0"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvOffsetMeter"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="10dp"
+            android:gravity="center"
+            android:padding="4dp"
+            android:text="Offset Meter: 0.0"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+
+    </LinearLayout>
+
+
+
+
+    <ProgressBar
+        android:id="@+id/timeRemainingBar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:layout_marginEnd="8dp"
+        android:layout_marginBottom="8dp"
+        android:elevation="2sp"
+        android:max="1800"
+        android:progress="0"
+        tools:progress="900" />
+
+
+    <LinearLayout
+        android:id="@+id/ll_up_down"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_alignParentRight="true"
+        android:layout_marginTop="80dp"
+        android:layout_marginRight="10dp"
+        android:orientation="vertical">
+
+
+        <ImageView
+            android:id="@+id/image_up"
+            android:layout_width="30dp"
+            android:layout_height="60dp"
+            android:src="@drawable/ic_action_navigation"
+            app:tint="#3F51B5" />
+
+
+        <ImageView
+            android:id="@+id/image_down"
+            android:layout_width="30dp"
+            android:layout_height="60dp"
+            android:layout_marginTop="10dp"
+            android:rotation="180"
+            android:src="@drawable/ic_action_navigation"
+            app:tint="#3F51B5" />
+
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/btn_f3"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/solid_color"
+                android:textColor="#505757"
+                android:gravity="center"
+                android:padding="4dp"
+                android:text="F3"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="40dp"
+                android:layout_height="1dp"
+                android:background="#999999" />
+
+            <TextView
+                android:id="@+id/btn_f2"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/solid_color"
+                android:gravity="center"
+                android:padding="4dp"
+                android:text="F2"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="40dp"
+                android:layout_height="1dp"
+                android:background="#999999" />
+
+            <TextView
+                android:id="@+id/btn_f1"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/solid_color"
+                android:gravity="center"
+                android:padding="4dp"
+                android:text="F1"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+
+            <View
+                android:layout_width="40dp"
+                android:layout_height="1dp"
+                android:background="#999999" />
+
+            <TextView
+                android:id="@+id/btn_g"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:background="@color/primaryBlue"
+                android:textColor="@color/white"
+                android:gravity="center"
+                android:padding="4dp"
+                android:text="G"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+
+            <View
+                android:layout_width="40dp"
+                android:layout_height="1dp"
+                android:background="#999999" />
+
+            <TextView
+                android:id="@+id/btn_lg"
+                android:layout_width="40dp"
+                android:layout_height="wrap_content"
+                android:background="@drawable/solid_color"
+                android:gravity="center"
+                android:padding="4dp"
+                android:text="LG"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+
+        </LinearLayout>
+
+
+    </LinearLayout>
+
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentBottom="true"
+        android:layout_marginBottom="20dp"
+        android:orientation="horizontal">
+
+        <Button
+            android:id="@+id/cancelButton"
+            android:layout_width="0dp"
+            android:layout_height="70dp"
+            android:layout_marginStart="32dp"
+            android:layout_marginBottom="24dp"
+            android:layout_weight="1"
+            android:text="@string/cancel"
+            android:textSize="16sp"
+            app:icon="@drawable/ic_baseline_cancel_24"
+            app:iconSize="28dp" />
+
+        <Button
+            android:id="@+id/stopButton"
+            android:layout_width="0dp"
+            android:layout_height="70dp"
+            android:layout_marginStart="20dp"
+            android:layout_marginEnd="32dp"
+            android:layout_marginBottom="24dp"
+            android:layout_weight="1"
+            android:text="@string/stop"
+            android:textSize="16sp"
+            app:icon="@drawable/ic_baseline_stop_24"
+            app:iconGravity="start"
+            app:iconSize="30dp" />
+
+
+    </LinearLayout>
+
+
+</RelativeLayout>
