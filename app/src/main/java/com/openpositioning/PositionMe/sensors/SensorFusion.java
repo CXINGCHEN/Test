@@ -20,6 +20,15 @@ import com.openpositioning.PositionMe.PdrProcessing;
 import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
 
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -398,7 +407,83 @@ public class SensorFusion implements SensorEventListener, Observer {
             }
             this.trajectory.addWifiData(wifiData);
         }
+        sendFingerprintData(this.wifiList);
+        Log.d("check","check_process");
+
+
     }
+
+    public JSONObject prepareFingerprintData(List<Wifi> scanResults) {
+        JSONObject data = new JSONObject();
+        JSONArray fingerprints = new JSONArray();
+
+        try {
+            for (Wifi result : scanResults) {
+                JSONObject fingerprint = new JSONObject();
+                fingerprint.put(String.valueOf(result.getBssid()), result.getLevel());
+                fingerprints.put(fingerprint);
+            }
+            data.put("wf", fingerprints);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return data;
+    }
+
+
+    public void sendFingerprintData(List<Wifi> scanResults) {
+        JSONObject data = prepareFingerprintData(scanResults);
+
+        Thread thread = new Thread(() -> {
+            try {
+                URL url = new URL("https://openpositioning.org/api/position/fine");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(data.toString().getBytes("UTF-8"));
+                }
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                        String inputLine;
+                        StringBuilder response = new StringBuilder();
+
+                        while ((inputLine = in.readLine()) != null) {
+                            response.append(inputLine);
+                        }
+
+                        // Process the response to extract positioning information
+                        processPositioningResponse(response.toString());
+                    }
+                } else {
+                    // Handle server error
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        thread.start();
+    }
+
+    public void processPositioningResponse(String response) {
+        try {
+            JSONObject jsonResponse = new JSONObject(response);
+            double API_latitude = jsonResponse.getDouble("lat");
+            double API_longitude = jsonResponse.getDouble("lon");
+            Log.d("Lat:", String.valueOf(API_latitude));
+            Log.d("Lon:", String.valueOf(API_longitude));
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
 
     /**
      * Method used for converting an array of orientation angles into a rotation matrix.
