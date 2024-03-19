@@ -404,6 +404,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 wifiData.addMacScans(Traj.Mac_Scan.newBuilder()
                         .setRelativeTimestamp(android.os.SystemClock.uptimeMillis() - bootTime)
                         .setMac(data.getBssid()).setRssi(data.getLevel()));
+                Log.d("MACCC", String.valueOf(wifiData));
             }
             this.trajectory.addWifiData(wifiData);
         }
@@ -415,15 +416,14 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     public JSONObject prepareFingerprintData(List<Wifi> scanResults) {
         JSONObject data = new JSONObject();
-        JSONArray fingerprints = new JSONArray();
+        JSONObject fingerprint = new JSONObject();
 
         try {
             for (Wifi result : scanResults) {
-                JSONObject fingerprint = new JSONObject();
                 fingerprint.put(String.valueOf(result.getBssid()), result.getLevel());
-                fingerprints.put(fingerprint);
             }
-            data.put("wf", fingerprints);
+            data.put("wf", fingerprint);
+            Log.d("data:", String.valueOf(data));
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -446,8 +446,9 @@ public class SensorFusion implements SensorEventListener, Observer {
                 try (OutputStream os = conn.getOutputStream()) {
                     os.write(data.toString().getBytes("UTF-8"));
                 }
-
+                Log.d("testtt", "Im hereeee");
                 int responseCode = conn.getResponseCode();
+                Log.d("hahah", String.valueOf(responseCode));
                 if (responseCode == HttpURLConnection.HTTP_OK) {
                     try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
                         String inputLine;
@@ -458,6 +459,8 @@ public class SensorFusion implements SensorEventListener, Observer {
                         }
 
                         // Process the response to extract positioning information
+
+                        Log.d("res:", response.toString());
                         processPositioningResponse(response.toString());
                     }
                 } else {
@@ -474,6 +477,7 @@ public class SensorFusion implements SensorEventListener, Observer {
     public void processPositioningResponse(String response) {
         try {
             JSONObject jsonResponse = new JSONObject(response);
+
             double API_latitude = jsonResponse.getDouble("lat");
             double API_longitude = jsonResponse.getDouble("lon");
             Log.d("Lat:", String.valueOf(API_latitude));
