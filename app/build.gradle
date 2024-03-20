@@ -11,7 +11,7 @@ android {
     defaultConfig {
         applicationId "com.openpositioning.PositionMe"
         minSdk 28
-        targetSdk 31
+        targetSdk 33
         versionCode 1
         versionName "1.0"
 
@@ -67,4 +67,23 @@ secrets {
     // "sdk.dir" is ignored by default.
     ignoreList.add("keyToIgnore") // Ignore the key "keyToIgnore"
     ignoreList.add("sdk.*")       // Ignore all keys matching the regexp "sdk.*"
+}
+
+dependencies {
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    implementation files('libs/ejml-v0.26-libs/EJML-core-0.26.jar')
+    implementation files('libs/ejml-v0.26-libs/EJML-core-0.26-sources.jar')
+    implementation files('libs/ejml-v0.26-libs/EJML-equation-0.26.jar')
+    implementation files('libs/ejml-v0.26-libs/EJML-equation-0.26-sources.jar')
+    implementation files('libs/ejml-v0.26-libs/EJML-experimental-0.26.jar')
+    implementation files('libs/ejml-v0.26-libs/EJML-experimental-0.26-sources.jar')
+    implementation files('libs/commons-math3-3.4.1.jar')
+    implementation files('libs/tileviewlib-1.0.13.jar')
+}
+
+
+configurations.all {
+    resolutionStrategy {
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.0'
+    }
 }

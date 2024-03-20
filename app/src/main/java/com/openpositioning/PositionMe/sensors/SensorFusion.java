@@ -14,13 +14,28 @@ import android.util.Log;
 
 import androidx.preference.PreferenceManager;
 
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.PolylineOptions;
 import com.openpositioning.PositionMe.MainActivity;
 import com.openpositioning.PositionMe.PathView;
 import com.openpositioning.PositionMe.PdrProcessing;
 import com.openpositioning.PositionMe.ServerCommunications;
 import com.openpositioning.PositionMe.Traj;
+import com.openpositioning.PositionMe.sensors.FusionAlgorithm.EKFAlgorithm;
+import com.openpositioning.PositionMe.sensors.FusionAlgorithm.EKFInputData;
+import com.openpositioning.PositionMe.viewitems.MovingSmooth;
 
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -129,6 +144,10 @@ public class SensorFusion implements SensorEventListener, Observer {
     // Wifi values
     private List<Wifi> wifiList;
 
+    // List to store the fused latitude and longitude values over time
+    private List<LatLng> fusedLatLongList = new ArrayList<>();
+
+
 
     // Over time accelerometer magnitude values since last step
     private List<Double> accelMagnitude;
@@ -138,6 +157,14 @@ public class SensorFusion implements SensorEventListener, Observer {
 
     // Trajectory displaying class
     private PathView pathView;
+
+    int N = 1; // for counting the current number of the live points to smooth the path data
+    // Declare MovingAverage instances for latitude and longitude
+    private MovingSmooth movingSmoothLat = new MovingSmooth(N); // N is the number of positions to average
+    private MovingSmooth movingSmoothLong = new MovingSmooth(N);
+
+    int mIterationK;
+
 
     //region Initialisation
     /**
@@ -154,6 +181,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.secondCounter = 0;
         // Step count initial value
         this.stepCounter = 0;
+        this.mIterationK = 1;
         // PDR elevation initial values
         this.elevation = 0;
         this.elevator = false;
@@ -221,6 +249,11 @@ public class SensorFusion implements SensorEventListener, Observer {
         // Initialise saveRecording to false - only record when explicitly started.
         this.saveRecording = false;
 
+        // Initialize MovingSmooth instances with  N value
+        this.movingSmoothLat  = new MovingSmooth(N);
+        this.movingSmoothLong = new MovingSmooth(N);
+
+
         // Over time data holder
         this.accelMagnitude = new ArrayList<>();
         // PDR
@@ -239,6 +272,8 @@ public class SensorFusion implements SensorEventListener, Observer {
         PowerManager powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
         wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
                 "MyApp::MyWakelockTag");
+
+        //
     }
     //endregion
 
@@ -317,7 +352,7 @@ public class SensorFusion implements SensorEventListener, Observer {
                 break;
 
             case Sensor.TYPE_ROTATION_VECTOR:
-                Log.d("SensorFusion","TYPE_ROTATION_VECTOR");
+                //Log.d("SensorFusion","TYPE_ROTATION_VECTOR");
                 // Save values
                 this.rotation = sensorEvent.values.clone();
                 float[] rotationVectorDCM = new float[9];
@@ -398,7 +433,152 @@ public class SensorFusion implements SensorEventListener, Observer {
             }
             this.trajectory.addWifiData(wifiData);
         }
+        sendFingerprintData(this.wifiList);
+          long currentTime = System.currentTimeMillis();
+
     }
+
+    public JSONObject prepareFingerprintData(List<Wifi> scanResults) {
+        JSONObject data = new JSONObject();
+        JSONObject fingerprint = new JSONObject();
+
+        try {
+            for (Wifi result : scanResults) {
+                fingerprint.put(String.valueOf(result.getBssid()), result.getLevel());
+            }
+            data.put("wf", fingerprint);
+            Log.d("data:", String.valueOf(data));
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        return data;
+    }
+
+
+    public void sendFingerprintData(List<Wifi> scanResults) {
+        JSONObject data = prepareFingerprintData(scanResults);
+
+
+        Thread thread = new Thread(() -> {
+            try {
+                URL url = new URL("https://openpositioning.org/api/position/fine");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("POST");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                try (OutputStream os = conn.getOutputStream()) {
+                    os.write(data.toString().getBytes("UTF-8"));
+                }
+
+                int responseCode = conn.getResponseCode();
+                Log.d("responseCode", String.valueOf(responseCode));
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    try (BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()))) {
+                        String inputLine;
+                        StringBuilder response = new StringBuilder();
+
+                        while ((inputLine = in.readLine()) != null) {
+                            response.append(inputLine);
+                        }
+
+                        // Process the response to extract positioning information
+
+                        processPositioningResponse(response.toString());
+                    }
+                } else {
+                    // Handle server error
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
+        thread.start();
+    }
+
+    List<EKFInputData> algorithmInputDataList = new ArrayList<>();
+    public void processPositioningResponse(String response) {
+        try {
+            JSONObject jsonResponse = new JSONObject(response);
+            double API_latitude = jsonResponse.getDouble("lat");
+            double API_longitude = jsonResponse.getDouble("lon");
+            Log.d("Lat:", String.valueOf(API_latitude));
+            Log.d("Lon:", String.valueOf(API_longitude));
+
+            //wifi position display
+
+            //map.addMarker(new MarkerOptions().position(new LatLng(API_latitude, API_longitude)).title("API Position"));
+
+            // Call the applyEKFAndDrawPolyline method
+            applyEKFAndDrawPolyline(algorithmInputDataList, API_latitude, API_longitude);
+
+
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    EKFAlgorithm result;
+    public void applyEKFAndDrawPolyline(List<EKFInputData> algorithmInputDataList, double API_latitude, double API_longitude) {
+        // Apply the EKF to the new position
+        Log.d("mIn:", String.valueOf(mIterationK));
+        algorithmInputDataList.add(new EKFInputData(EKFInputData.Source.API, new double[]{API_latitude, API_longitude}, System.currentTimeMillis()));
+        algorithmInputDataList.add(new EKFInputData(EKFInputData.Source.GNSS, new double[]{getGNSSLatitude(false)[0],getGNSSLatitude(false)[1]}, System.currentTimeMillis()));
+        //use PDR estimation replace the GNSS LatLong
+       // algorithmInputDataList.add(new EKFInputData(EKFInputData.Source.GNSS, new double[]{getGNSSLatitude(false)[0],getGNSSLatitude(false)[1]}, System.currentTimeMillis()));
+        // First iteration
+        if (mIterationK == 1){
+            /* Initial guess using Weighted Circular Least Square algorithm */
+            //Point initialGuess = mLSAlgorithm.applyWCLSAlgorithm(mAlgorithmInputDataList);
+            double[] x = new double[]{API_latitude, API_longitude};
+
+            /* Set covariance matrix P */
+            double[][] P = new double[][]{{10,0}, {0, 10}};
+
+            result = new EKFAlgorithm(x, P);
+
+                            /* Apply EKF algorithm with algorithmInputDataList and initial
+                            guesses from WCLS algorithm */
+            result = result.applyEKFAlgorithm(algorithmInputDataList, result);
+            Log.d("check result:", result.toString());
+            mIterationK++;
+        }
+        else {
+            /* Apply EKF algorithm with algorithmInputDataList and estimates from
+                             previous iteration */
+            result = result.applyEKFAlgorithm(algorithmInputDataList, result);
+            mIterationK++;
+        }
+
+    // Update the position
+    double[] fusedLatLong = {result.x.get(0,0), result.x.get(1,0)};
+    Log.d("FusedLatLong:", Arrays.toString(fusedLatLong));
+
+        N ++;
+        movingSmoothLat.updateN(N);
+        movingSmoothLong.updateN(N);
+
+        // Add the new position to the MovingAverage instances
+        movingSmoothLat.add(fusedLatLong[0]);
+        movingSmoothLong.add(fusedLatLong[1]);
+
+        // Get the smoothed latitude and longitude
+        double smoothedLat = movingSmoothLat.getAverage();
+        double smoothedLong = movingSmoothLong.getAverage();
+
+        // Add the smoothed position to the fusedLatLongList
+        fusedLatLongList.add(new LatLng(smoothedLat, smoothedLong));
+
+        // Draw the live polyline
+        PolylineOptions fusedPolyline = new PolylineOptions();
+        fusedPolyline.addAll(fusedLatLongList);
+        //Log.d("fusedPolyLine:", fusedPolyline.toString());
+        // Assuming you have a GoogleMap object named "map"
+        //map.addPolyline(polylineOptions);
+}
 
     /**
      * Method used for converting an array of orientation angles into a rotation matrix.
@@ -705,6 +885,7 @@ public class SensorFusion implements SensorEventListener, Observer {
         this.wakeLock.acquire(31*60*1000L /*31 minutes*/);
         this.saveRecording = true;
         this.stepCounter = 0;
+        //this.mIterationK = 1;
         this.absoluteStartTime = System.currentTimeMillis();
         this.bootTime = android.os.SystemClock.uptimeMillis();
         // Protobuf trajectory class for sending sensor data to restful API
@@ -817,8 +998,8 @@ public class SensorFusion implements SensorEventListener, Observer {
                 // Store pressure and light data
                 if (barometerSensor.sensor != null) {
                     trajectory.addPressureData(Traj.Pressure_Sample.newBuilder()
-                                    .setPressure(pressure)
-                                    .setRelativeTimestamp(android.os.SystemClock.uptimeMillis() - bootTime))
+                            .setPressure(pressure)
+                            .setRelativeTimestamp(android.os.SystemClock.uptimeMillis() - bootTime))
                             .addLightData(Traj.Light_Sample.newBuilder()
                                     .setLight(light)
                                     .setRelativeTimestamp(android.os.SystemClock.uptimeMillis() - bootTime)
